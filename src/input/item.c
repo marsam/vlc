@@ -1153,6 +1153,7 @@ static int GuessType( const input_item_t *p_item, bool *p_net )
         { "jack",   ITEM_TYPE_CARD, false },
         { "linsys", ITEM_TYPE_CARD, false },
         { "live",   ITEM_TYPE_STREAM, true }, /* livedotcom */
+        { "magnet", ITEM_TYPE_STREAM, true },
         { "mms",    ITEM_TYPE_STREAM, true },
         { "mtp",    ITEM_TYPE_DISC, false },
         { "nfs",    ITEM_TYPE_FILE, true },
@@ -1177,6 +1178,7 @@ static int GuessType( const input_item_t *p_item, bool *p_net )
         { "svcd",   ITEM_TYPE_DISC, false },
         { "tcp",    ITEM_TYPE_STREAM, true },
         { "terres", ITEM_TYPE_CARD, false }, /* terrestrial */
+        { "torrent",ITEM_TYPE_STREAM, true },
         { "udp",    ITEM_TYPE_STREAM, true },  /* udplite too */
         { "unsv",   ITEM_TYPE_STREAM, true },
         { "upnp",   ITEM_TYPE_FILE, true },
