@@ -186,6 +186,28 @@ function js_descramble( sig, js_url )
     return sig
 end
 
+function parse_json(url)
+    vlc.msg.dbg("Trying to parse JSON from " .. url)
+    local json = require ("dkjson")
+
+    -- Use vlc.stream to grab a remote json file, place it in a string,
+    -- decode it and return the decoded data.
+    local stream = vlc.stream(url)
+    local string = ""
+    local line   = ""
+
+    if not stream then return false end
+
+    while true do
+        line = stream:readline()
+        if not line then break end
+
+        string = string .. line
+    end
+
+    return json.decode(string)
+end
+
 -- Parse and pick our video URL
 function pick_url( url_map, fmt, js_url )
     local path = nil
@@ -244,6 +266,19 @@ function parse()
         or string.match( vlc.path, "/live$" )
         or string.match( vlc.path, "/live%?" )
     then -- This is the HTML page's URL
+        if string.match(vlc.path, "list=") then
+            local playlistID = get_url_param( vlc.path, "list" )
+            local response = parse_json(vlc.access .. "://www.youtube.com/list_ajax?action_get_list=1&style=json&list=" .. playlistID)
+            local playlist = {}
+            for _, item in ipairs(response.video) do
+                table.insert(playlist, { path = vlc.access .. "://www.youtube.com/watch?v=" .. item.encrypted_id;
+                                         title = item.title;
+                                         artist = item.artist;
+                                         arturl = item.thumbnail;
+                                         description = item.description})
+            end
+            return playlist
+        end
         -- fmt is the format of the video
         -- (cf. http://en.wikipedia.org/wiki/YouTube#Quality_and_formats)
         fmt = get_url_param( vlc.path, "fmt" )
