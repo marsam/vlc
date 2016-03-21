@@ -1,7 +1,7 @@
 # LIBTORRENT
 
 TORRENT_VERSION := 1.0.3
-TORRENT_URL := http://sourceforge.net/projects/libtorrent/files/libtorrent/libtorrent-rasterbar-$(TORRENT_VERSION).tar.gz
+TORRENT_URL := https://github.com/arvidn/libtorrent/releases/download/libtorrent-$(subst .,_,$(TORRENT_VERSION))/libtorrent-rasterbar-$(TORRENT_VERSION).tar.gz
 
 ifeq ($(call need_pkg,"libtorrent-rasterbar"),)
 PKGS_FOUND += torrent
