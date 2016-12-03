@@ -26,85 +26,71 @@ function probe()
     local path = vlc.path
     path = path:gsub("^www%.", "")
     return ( vlc.access == "http" or vlc.access == "https" )
-        and string.match( path, "^soundcloud%.com/.+/.+" )
+        and string.match( path, "^soundcloud%.com/.+" )
 end
 
-function fix_quotes( value )
-    if string.match( value, "^\"" ) then
-        return "" -- field was really empty string
+function parse_json(url)
+    vlc.msg.dbg("Trying to parse JSON from " .. url)
+    local json = require ("dkjson")
+
+    -- Use vlc.stream to grab a remote json file, place it in a string,
+    -- decode it and return the decoded data.
+    local stream = vlc.stream(url)
+    local string = ""
+    local line   = ""
+
+    if not stream then return false end
+
+    while true do
+        line = stream:read(65536)
+        if not line then break end
+
+        string = string .. line
     end
 
-    -- TODO: handle escaped backslashes and others
-    return string.gsub( value, "\\\"", "\"" )
+    return json.decode(string)
+end
+
+-- Create a playlist item from a soundcloud track resource
+function create_track(item, client_id)
+    local url = item.downloadable and item.download_url or item.stream_url
+    return { path = url .. "?client_id=" .. client_id,
+             name = item.user.username .. " - " .. item.title,
+             title = item.title,
+             artist = item.user.username,
+             date = item.created_at,
+             genre = item.genre,
+             arturl = item.artwork_url or item.user.avatar_url,
+             rating = item.favoritings_count,
+             copyright = item.license,
+             description = item.description }
 end
 
 -- Parse function.
 function parse()
-    while true do
-        line = vlc.readline()
-        if not line then break end
-
-        -- Parameters for API call
-        if not track then
-            track = string.match( line, "soundcloud:tracks:(%d+)" )
+    -- API magic
+    local client_id = "WKcQQdEZw7Oi01KqtHWxeVSxNyRzgT8M"
+    -- app_version is not required by the API but we send it anyway
+    -- to remain unconspicuous
+    local app_version = "1505226596"
+    local response = parse_json(vlc.access.."://api.soundcloud.com/resolve?url="..vlc.access.."://"..vlc.path.."&_status_code_map[302]=200&_status_format=json&client_id="..client_id.."&app_version="..app_version)
+    local data = parse_json(response.location)
+    local playlist = {}
+    if not data.kind then
+        for _, track in ipairs(data) do
+            table.insert(playlist, create_track(track, client_id))
         end
-
-        -- For private tracks
-        if not secret then
-            secret = string.match( line, "[\"']secret_token[\"'] *: *[\"'](.-)[\"']" )
+    elseif data.kind == "track" then
+        table.insert(playlist, create_track(data, client_id))
+    elseif data.kind == "user" then
+        local tracks = parse_json(vlc.access.."://api.soundcloud.com/users/"..data.id.."/tracks".."?client_id="..client_id.."&app_version="..app_version)
+        for _, track in ipairs(tracks) do
+            table.insert(playlist, create_track(track, client_id))
         end
-
-        -- Metadata
-        if not name then
-            name = string.match( line, "[\"']title[\"'] *: *\"(.-[^\\])\"" )
-            if name then
-                name = fix_quotes( name )
-            end
-        end
-
-        if not description then
-            description = string.match( line, "[\"']artwork_url[\"'] *:.-[\"']description[\"'] *: *\"(.-[^\\])\"" )
-            if description then
-                description = fix_quotes( description )
-            end
-        end
-
-        if not artist then
-            artist = string.match( line, "[\"']username[\"'] *: *\"(.-[^\\])\"" )
-            if artist then
-                artist = fix_quotes( artist )
-            end
-        end
-
-        if not arturl then
-            arturl = string.match( line, "[\"']artwork_url[\"'] *: *[\"'](.-)[\"']" )
+    elseif data.kind == "playlist" then
+        for _, track in ipairs(data.tracks) do
+            table.insert(playlist, create_track(track, client_id))
         end
     end
-
-    if track then
-        -- API magic
-        local client_id = "WKcQQdEZw7Oi01KqtHWxeVSxNyRzgT8M"
-        -- app_version is not required by the API but we send it anyway
-        -- to remain unconspicuous
-        local app_version = "1505226596"
-
-        local api = vlc.stream( vlc.access.."://api.soundcloud.com/i1/tracks/"..track.."/streams?client_id="..client_id.."&app_version="..app_version..( secret and "&secret_token="..secret or "" ) )
-
-        if api then
-            local streams = api:readline() -- data is on one line only
-            -- For now only quality available is 128 kbps (http_mp3_128_url)
-            path = string.match( streams, "[\"']http_mp3_%d+_url[\"'] *: *[\"'](.-)[\"']" )
-            if path then
-                -- FIXME: do this properly
-                path = string.gsub( path, "\\u0026", "&" )
-            end
-        end
-    end
-
-    if not path then
-        vlc.msg.err( "Couldn't extract soundcloud audio URL, please check for updates to this script" )
-        return { }
-    end
-
-    return { { path = path, name = name, description = description, artist = artist, arturl = arturl } }
+    return playlist
 end
