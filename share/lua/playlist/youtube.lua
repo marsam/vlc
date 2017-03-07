@@ -257,6 +257,7 @@ function probe()
             or string.match( vlc.path, "/get_video_info%?" ) -- info API
             or string.match( vlc.path, "/v/" ) -- video in swf player
             or string.match( vlc.path, "/embed/" ) -- embedded player iframe
+            or string.match( vlc.path, "/playlist%?" ) -- playlist
              ) )
 end
 
@@ -265,6 +266,7 @@ function parse()
     if string.match( vlc.path, "/watch%?" )
         or string.match( vlc.path, "/live$" )
         or string.match( vlc.path, "/live%?" )
+        or string.match( vlc.path, "/playlist%?" )
     then -- This is the HTML page's URL
         if string.match(vlc.path, "list=") then
             local playlistID = get_url_param( vlc.path, "list" )
