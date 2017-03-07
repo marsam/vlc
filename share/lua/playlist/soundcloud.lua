@@ -20,6 +20,7 @@
  along with this program; if not, write to the Free Software
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
 --]]
+local json = require "dkjson"
 
 -- Probe function.
 function probe()
@@ -29,12 +30,9 @@ function probe()
         and string.match( path, "^soundcloud%.com/.+" )
 end
 
+-- Use vlc.stream to grab a remote json file, place it in a string,
+-- decode it and return the decoded data.
 function parse_json(url)
-    vlc.msg.dbg("Trying to parse JSON from " .. url)
-    local json = require ("dkjson")
-
-    -- Use vlc.stream to grab a remote json file, place it in a string,
-    -- decode it and return the decoded data.
     local stream = vlc.stream(url)
     local string = ""
     local line   = ""
