@@ -72,8 +72,16 @@ function parse()
     -- to remain unconspicuous
     local app_version = "1505226596"
     local response = parse_json(vlc.access.."://api.soundcloud.com/resolve?url="..vlc.access.."://"..vlc.path.."&_status_code_map[302]=200&_status_format=json&client_id="..client_id.."&app_version="..app_version)
+    if not response then
+        vlc.msg.err( "Couldn't extract soundcloud audio URL, please check for updates to this script" )
+        return { }
+    end
     local data = parse_json(response.location)
-    local playlist = {}
+    if not data then
+        vlc.msg.err( "Couldn't extract soundcloud audio URL, please check for updates to this script" )
+        return { }
+    end
+    local playlist = { }
     if not data.kind then
         for _, track in ipairs(data) do
             table.insert(playlist, create_track(track, client_id))
@@ -89,6 +97,9 @@ function parse()
         for _, track in ipairs(data.tracks) do
             table.insert(playlist, create_track(track, client_id))
         end
+    else
+        vlc.msg.err( "Couldn't extract soundcloud audio URL, please check for updates to this script" )
+        return { }
     end
     return playlist
 end
